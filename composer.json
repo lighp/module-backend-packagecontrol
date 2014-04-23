@@ -1,0 +1,17 @@
+{
+    "name": "lighp/module-backend-packagecontrol",
+    "description": "A package control module, based on Composer.",
+    "license": "GPLv3",
+    "version": "0.3",
+    "type":"lighp-module",
+    "authors": [
+        {
+            "name": "emersion",
+            "email": "contact@emersion.fr"
+        }
+    ],
+    "require": {
+        "lighp/composer-lighp-installers": "dev-master",
+        "composer/composer": "1.0.*@dev"
+    }
+}
