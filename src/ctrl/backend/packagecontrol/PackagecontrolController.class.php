@@ -2,6 +2,8 @@
 
 namespace ctrl\backend\packagecontrol;
 
+use RuntimeException;
+
 use core\http\HTTPRequest;
 use core\fs\Pathfinder;
 use core\Config;
@@ -159,7 +161,7 @@ class PackagecontrolController extends \core\BackController {
 		$downloadUrl = 'https://getcomposer.org/composer.phar';
 
 		if (copy($downloadUrl, $destPath) === false) {
-			throw new \Exception('Cannot download Composer');
+			throw new RuntimeException('Cannot download Composer');
 		}
 	}
 
@@ -177,6 +179,14 @@ class PackagecontrolController extends \core\BackController {
 
 		$executableFinder = new PhpExecutableFinder();
 		$php = $executableFinder->find();
+
+		if (stristr(PHP_OS, 'WIN')) { // Workaround for WAMP
+			$wampPhp = 'C:\\wamp\\bin\\php\\php'.PHP_VERSION.'\\php.exe';
+			if (is_executable($wampPhp)) {
+				$php = $wampPhp;
+			}
+		}
+
 		if ($php === false) {
 			throw new RuntimeException('Unable to find the PHP executable.');
 		}
