@@ -13,6 +13,7 @@
     "require": {
         "lighp/composer-lighp-installers": "dev-master",
         "composer/composer": "1.0.*@dev",
-        "symfony/process": "~2.6@dev"
+        "symfony/process": "~2.6@dev",
+        "sensiolabs/ansi-to-html": "^1.1@dev"
     }
 }
