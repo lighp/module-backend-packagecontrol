@@ -2,8 +2,6 @@
 
 namespace ctrl\backend\packagecontrol;
 
-use RuntimeException;
-
 use core\http\HTTPRequest;
 use core\fs\Pathfinder;
 use core\Config;
@@ -34,6 +32,8 @@ use Composer\DependencyResolver\DefaultPolicy;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\ProcessBuilder;
 use Symfony\Component\Process\PhpExecutableFinder;
+
+use SensioLabs\AnsiConverter\AnsiToHtmlConverter;
 
 class PackagecontrolController extends \core\BackController {
 	protected $composer;
@@ -152,7 +152,12 @@ class PackagecontrolController extends \core\BackController {
 		$app = $this->_getApp();
 		$result = $app->run($input, $output);
 
-		$this->page()->addVar('output', $output->fetch());
+		$stdout = $output->fetch();
+
+		$converter = new AnsiToHtmlConverter();
+		$stdout = $converter->convert($stdout);
+
+		$this->page()->addVar('output', $stdout);
 
 		return $result;
 	}
@@ -161,16 +166,28 @@ class PackagecontrolController extends \core\BackController {
 		$downloadUrl = 'https://getcomposer.org/composer.phar';
 
 		if (copy($downloadUrl, $destPath) === false) {
-			throw new RuntimeException('Cannot download Composer');
+			throw new \Exception('Cannot download Composer');
 		}
 	}
 
 	protected function _ensureComposerAvailable() {
 		$destPath = Pathfinder::getRoot().'/composer.phar';
 
+		$doDownload = false;
 		if (!file_exists($destPath)) {
+			$doDownload = true;
+		} else {
+			$updateInterval = 30 * 24 * 60 * 60; // 30 days
+			if (time() - filemtime($destPath) > $updateInterval) {
+				$doDownload = true;
+			}
+		}
+
+		if ($doDownload) {
 			$this->_downloadComposer($destPath);
 		}
+
+		return $doDownload;
 	}
 
 	protected function _runCommandInProc($args = array()) {
@@ -179,29 +196,37 @@ class PackagecontrolController extends \core\BackController {
 
 		$executableFinder = new PhpExecutableFinder();
 		$php = $executableFinder->find();
-
-		if (stristr(PHP_OS, 'WIN')) { // Workaround for WAMP
-			$wampPhp = 'C:\\wamp\\bin\\php\\php'.PHP_VERSION.'\\php.exe';
-			if (is_executable($wampPhp)) {
-				$php = $wampPhp;
-			}
-		}
-
 		if ($php === false) {
-			throw new RuntimeException('Unable to find the PHP executable.');
+			throw new \RuntimeException('Unable to find the PHP executable.');
 		}
 
 		$builder = new ProcessBuilder();
 		$builder->setEnv('COMPOSER_HOME', $this->_getComposerHome());
 		$builder->setWorkingDirectory(Pathfinder::getRoot());
 		$builder->setTimeout(250);
-		$builder->setPrefix(array($php, 'composer.phar', '--no-progress'/*, '--profile', '-vvv'*/));
+		$builder->setPrefix(array($php, 'composer.phar', '--no-progress', '--ansi'/*, '--profile', '-vvv'*/));
 		$builder->setArguments($args);
+
+		$this->page()->addVar('arguments', implode(' ', $args));
 
 		$process = $builder->getProcess();
 		$process->run();
 
-		$this->page()->addVar('output', trim($process->getOutput()));
+		$stdout = trim($process->getOutput());
+		$stderr = trim($process->getErrorOutput());
+
+		$converter = new AnsiToHtmlConverter();
+		$stdout = $converter->convert($stdout);
+		$stderr = $converter->convert($stderr);
+
+		// Workaround for info being output in stderr
+		if (empty($stdout) && !empty($stderr)) {
+			$stdout = $stderr;
+			$stderr = '';
+		}
+
+		$this->page()->addVar('errorOutput', $stderr);
+		$this->page()->addVar('output', $stdout);
 
 		return $process;
 	}
@@ -467,7 +492,7 @@ class PackagecontrolController extends \core\BackController {
 				$this->page()->addVar('removed?', true);
 			}*/
 
-			$process = $this->_runCommandInProc(array('remove', $pkgName));
+			$process = $this->_runCommandInProc(array('--no-update', 'remove', $pkgName));
 
 			if ($process->isSuccessful()) {
 				$this->page()->addVar('removed?', true);
