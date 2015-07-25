@@ -202,6 +202,7 @@ class PackagecontrolController extends \core\BackController {
 
 		$builder = new ProcessBuilder();
 		$builder->setEnv('COMPOSER_HOME', $this->_getComposerHome());
+		$builder->setEnv('COMPOSER_DISCARD_CHANGES', 'true');
 		$builder->setWorkingDirectory(Pathfinder::getRoot());
 		$builder->setTimeout(250);
 		$builder->setPrefix(array($php, 'composer.phar', '--no-progress', '--ansi'/*, '--profile', '-vvv'*/));
