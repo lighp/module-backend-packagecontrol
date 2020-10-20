@@ -163,7 +163,7 @@ class PackagecontrolController extends \core\BackController {
 	}
 
 	protected function _downloadComposer($destPath) {
-		$downloadUrl = 'https://getcomposer.org/composer.phar';
+		$downloadUrl = 'https://getcomposer.org/composer-1.phar';
 
 		if (copy($downloadUrl, $destPath) === false) {
 			throw new \Exception('Cannot download Composer');
